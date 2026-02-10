@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+}
+
+input,
+select,
+textarea {
+  color: #171717 !important;
+}
+
+select {
+  color: #171717 !important;
+  background-color: white !important;
+}
+
+select option {
+  color: #171717 !important;
+  background-color: white !important;
+  font-weight: 400 !important;
+}
+
+select option:hover,
+select option:focus {
+  background-color: #f3f4f6 !important;
+  color: #171717 !important;
+}
+
+/* Ensure select and options have proper contrast */
+select:not([multiple]):not([size]) {
+  color: #171717 !important;
+  background-color: white !important;
+}
+
+option {
+  color: #171717 !important;
+  background-color: white !important;
+}
+
+option:not(:checked) {
+  color: #171717 !important;
+  background-color: white !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  opacity: 1;
+}
