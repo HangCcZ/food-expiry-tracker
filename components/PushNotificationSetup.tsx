@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';
 import {
   isPushNotificationSupported,
   getNotificationPermission,
@@ -8,52 +8,50 @@ import {
   unsubscribeFromPushNotifications,
   showTestNotification,
   extractSubscriptionDetails,
-} from '@/lib/utils/pushNotifications'
-import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/hooks/useAuth'
+} from '@/lib/utils/pushNotifications';
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export default function PushNotificationSetup() {
-  const { user } = useAuth()
-  const [isSupported, setIsSupported] = useState(false)
-  const [permission, setPermission] = useState<NotificationPermission>('default')
-  const [isSubscribed, setIsSubscribed] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [showBanner, setShowBanner] = useState(true)
-  const supabase = createClient()
+  const { user } = useAuth();
+  const [isSupported, setIsSupported] = useState(false);
+  const [permission, setPermission] =
+    useState<NotificationPermission>('default');
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showBanner, setShowBanner] = useState(true);
+  const supabase = createClient();
 
   useEffect(() => {
-    // Check if push notifications are supported
-    setIsSupported(isPushNotificationSupported())
+    setIsSupported(isPushNotificationSupported());
 
     if (isPushNotificationSupported()) {
-      setPermission(getNotificationPermission())
-      checkSubscriptionStatus()
+      setPermission(getNotificationPermission());
+      checkSubscriptionStatus();
     }
-  }, [])
+  }, []);
 
   const checkSubscriptionStatus = async () => {
     try {
-      const registration = await navigator.serviceWorker.getRegistration()
+      const registration = await navigator.serviceWorker.getRegistration();
       if (registration) {
-        const subscription = await registration.pushManager.getSubscription()
-        setIsSubscribed(!!subscription)
+        const subscription = await registration.pushManager.getSubscription();
+        setIsSubscribed(!!subscription);
       }
     } catch (error) {
-      console.error('Error checking subscription status:', error)
+      console.error('Error checking subscription status:', error);
     }
-  }
+  };
 
   const handleEnableNotifications = async () => {
-    if (!user) return
+    if (!user) return;
 
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      // Subscribe to push notifications
-      const subscription = await subscribeToPushNotifications()
+      const subscription = await subscribeToPushNotifications();
 
       if (subscription) {
-        // Send subscription to server
-        const subscriptionData = extractSubscriptionDetails(subscription)
+        const subscriptionData = extractSubscriptionDetails(subscription);
 
         const { error } = await supabase.from('push_subscriptions').insert([
           {
@@ -64,181 +62,142 @@ export default function PushNotificationSetup() {
             user_agent: navigator.userAgent,
             is_active: true,
           },
-        ])
+        ]);
 
-        if (error) throw error
+        if (error) throw error;
 
-        // Update profile to enable notifications
         await supabase
           .from('profiles')
           .update({ notification_enabled: true })
-          .eq('id', user.id)
+          .eq('id', user.id);
 
-        setIsSubscribed(true)
-        setPermission('granted')
-        setShowBanner(false)
+        setIsSubscribed(true);
+        setPermission('granted');
+        setShowBanner(false);
 
-        // Show test notification
-        await showTestNotification()
+        await showTestNotification();
       }
     } catch (error: any) {
-      console.error('Error enabling notifications:', error)
-      alert(error.message || 'Failed to enable notifications')
+      console.error('Error enabling notifications:', error);
+      alert(error.message || 'Failed to enable notifications');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleDisableNotifications = async () => {
-    if (!user) return
+    if (!user) return;
 
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      // Unsubscribe from push notifications
-      await unsubscribeFromPushNotifications()
+      await unsubscribeFromPushNotifications();
 
-      // Mark all subscriptions as inactive in database
       await supabase
         .from('push_subscriptions')
         .update({ is_active: false })
-        .eq('user_id', user.id)
+        .eq('user_id', user.id);
 
-      // Update profile
       await supabase
         .from('profiles')
         .update({ notification_enabled: false })
-        .eq('id', user.id)
+        .eq('id', user.id);
 
-      setIsSubscribed(false)
-      setShowBanner(false)
+      setIsSubscribed(false);
+      setShowBanner(true);
     } catch (error: any) {
-      console.error('Error disabling notifications:', error)
-      alert(error.message || 'Failed to disable notifications')
+      console.error('Error disabling notifications:', error);
+      alert(error.message || 'Failed to disable notifications');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleTestNotification = async () => {
     try {
-      await showTestNotification()
+      await showTestNotification();
     } catch (error: any) {
-      alert(error.message || 'Failed to show test notification')
+      alert(error.message || 'Failed to show test notification');
     }
-  }
+  };
 
-  // Don't show if not supported
-  if (!isSupported) return null
+  if (!isSupported) return null;
 
-  // Show banner if notifications are not enabled
-  if (showBanner && permission !== 'granted' && !isSubscribed) {
+  // Enable banner
+  if (showBanner && permission !== 'denied' && !isSubscribed) {
     return (
-      <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
-        <div className="flex items-start">
-          <div className="flex-shrink-0">
-            <svg
-              className="h-5 w-5 text-blue-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                clipRule="evenodd"
-              />
+      <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
           </div>
-          <div className="ml-3 flex-1">
-            <h3 className="text-sm font-medium text-blue-800">
-              Enable Expiry Reminders
-            </h3>
-            <p className="mt-1 text-sm text-blue-700">
-              Get notified when your food is about to expire so you never waste food again!
-            </p>
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={handleEnableNotifications}
-                disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-              >
-                {isLoading ? 'Enabling...' : 'Enable Notifications'}
-              </button>
-              <button
-                onClick={() => setShowBanner(false)}
-                className="px-4 py-2 text-sm text-blue-700 hover:text-blue-900"
-              >
-                Maybe Later
-              </button>
-            </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-900">Enable expiry reminders</p>
+            <p className="text-xs text-gray-500 truncate">Get notified when food is about to expire</p>
           </div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={handleEnableNotifications}
+            disabled={isLoading}
+            className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 disabled:opacity-50"
+          >
+            {isLoading ? 'Enabling...' : 'Enable'}
+          </button>
           <button
             onClick={() => setShowBanner(false)}
-            className="ml-3 flex-shrink-0"
+            className="p-1 text-gray-300 hover:text-gray-500"
           >
-            <svg
-              className="h-5 w-5 text-blue-400 hover:text-blue-600"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                clipRule="evenodd"
-              />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
       </div>
-    )
+    );
   }
 
-  // Show status if subscribed
+  // Subscribed state — compact
   if (isSubscribed) {
     return (
-      <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-green-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-green-800">
-                Notifications enabled ✓
-              </p>
-              <p className="mt-1 text-xs text-green-700">
-                You&apos;ll receive daily reminders about expiring items
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleTestNotification}
-              className="text-xs text-green-700 hover:text-green-900 underline"
-            >
-              Test
-            </button>
-            <button
-              onClick={handleDisableNotifications}
-              disabled={isLoading}
-              className="text-xs text-green-700 hover:text-green-900 underline"
-            >
-              Disable
-            </button>
-          </div>
+      <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+          <span className="text-xs text-gray-600">Reminders enabled</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleTestNotification}
+            className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded"
+          >
+            Test
+          </button>
+          <button
+            onClick={handleDisableNotifications}
+            disabled={isLoading}
+            className="px-2 py-1 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded disabled:opacity-50"
+          >
+            Disable
+          </button>
         </div>
       </div>
-    )
+    );
   }
 
-  return null
+  // Dismissed — minimal link
+  if (!isSubscribed && permission !== 'denied') {
+    return (
+      <div className="text-center">
+        <button
+          onClick={() => setShowBanner(true)}
+          className="text-xs text-gray-400 hover:text-blue-600"
+        >
+          Enable expiry reminders
+        </button>
+      </div>
+    );
+  }
+
+  return null;
 }

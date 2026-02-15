@@ -5,10 +5,30 @@ const nextConfig: NextConfig = {
 
   // PWA configuration - ensure service worker is properly served
   async headers() {
+    const securityHeaders = [
+      {
+        key: 'X-Content-Type-Options',
+        value: 'nosniff',
+      },
+      {
+        key: 'X-Frame-Options',
+        value: 'SAMEORIGIN',
+      },
+      {
+        key: 'Referrer-Policy',
+        value: 'strict-origin-when-cross-origin',
+      },
+    ];
+
     return [
+      {
+        source: '/:path*',
+        headers: securityHeaders,
+      },
       {
         source: '/sw.js',
         headers: [
+          ...securityHeaders,
           {
             key: 'Service-Worker-Allowed',
             value: '/',
@@ -22,6 +42,7 @@ const nextConfig: NextConfig = {
       {
         source: '/manifest.json',
         headers: [
+          ...securityHeaders,
           {
             key: 'Content-Type',
             value: 'application/manifest+json',

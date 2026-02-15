@@ -61,27 +61,22 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return
 
-  // API requests: Network-first
+  // API / Supabase requests: Network-only (never cache sensitive data)
   if (event.request.url.includes('/api/') || event.request.url.includes('supabase')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Clone the response before caching
-          const responseClone = response.clone()
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone)
-          })
-          return response
-        })
-        .catch(() => {
-          // Fallback to cache if network fails
-          return caches.match(event.request)
-        })
-    )
+    event.respondWith(fetch(event.request))
     return
   }
 
-  // Static assets: Cache-first
+  // Static assets: Network-first in development, cache-first in production
+  const isDevServer = event.request.url.includes('localhost') || event.request.url.includes('127.0.0.1')
+
+  if (isDevServer) {
+    // Development: always go to network so hot reload works
+    event.respondWith(fetch(event.request))
+    return
+  }
+
+  // Production: Cache-first
   event.respondWith(
     caches.match(event.request).then((response) => {
       if (response) {
