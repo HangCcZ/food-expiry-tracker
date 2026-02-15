@@ -97,3 +97,27 @@ export const QUANTITY_UNITS = [
 ] as const
 
 export type QuantityUnit = (typeof QUANTITY_UNITS)[number]
+
+// AI Recipe Suggestion types
+
+export interface RecipeSuggestion {
+  title: string
+  description: string
+  steps: string[]
+  ingredients_used: string[]
+}
+
+export interface RecipeCache {
+  id: string
+  ingredient_hash: string
+  ingredients: string[]
+  recipes: RecipeSuggestion[]
+  prompt_text?: string | null
+  model: string
+  prompt_tokens?: number | null
+  completion_tokens?: number | null
+  total_tokens?: number | null
+  generation_time_ms?: number | null
+  created_at: string
+  expires_at: string
+}

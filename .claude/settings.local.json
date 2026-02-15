@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(node -e:*)",
+      "Bash(node scripts/generate-icons.mjs:*)",
+      "Bash(ls:*)",
+      "Bash(npx supabase:*)",
+      "WebFetch(domain:docs.aimlapi.com)",
+      "Bash(npm audit:*)"
+    ]
+  }
+}

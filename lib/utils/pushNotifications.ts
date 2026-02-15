@@ -123,7 +123,7 @@ export async function unsubscribeFromPushNotifications(): Promise<boolean> {
  * Show a local test notification
  */
 export async function showTestNotification(): Promise<void> {
-  if (!isPushNotificationSupported()) {
+  if (!('Notification' in window)) {
     throw new Error('Notifications are not supported')
   }
 
@@ -132,13 +132,22 @@ export async function showTestNotification(): Promise<void> {
     throw new Error('Notification permission denied')
   }
 
-  const registration = await navigator.serviceWorker.ready
-  await registration.showNotification('Food Expiry Tracker', {
-    body: 'Push notifications are working!',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/badge-72x72.png',
-    tag: 'test-notification',
-  })
+  // Try service worker notification first, fall back to basic Notification API
+  const registration = await navigator.serviceWorker?.getRegistration()
+  if (registration?.active) {
+    await registration.showNotification('Food Expiry Tracker', {
+      body: 'Push notifications are working!',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/badge-72x72.png',
+      tag: 'test-notification',
+    })
+  } else {
+    new Notification('Food Expiry Tracker', {
+      body: 'Push notifications are working!',
+      icon: '/icons/icon-192x192.png',
+      tag: 'test-notification',
+    })
+  }
 }
 
 /**
