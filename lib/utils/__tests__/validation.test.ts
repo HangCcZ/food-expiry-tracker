@@ -60,6 +60,30 @@ describe('name validation', () => {
   })
 })
 
+// ─── brand validation ────────────────────────────────
+
+describe('brand validation', () => {
+  it('passes for empty brand (optional)', () => {
+    const errors = validateFoodItemForm({ ...validInput, brand: '' })
+    expect(errors.brand).toBeUndefined()
+  })
+
+  it('passes for undefined brand', () => {
+    const errors = validateFoodItemForm(validInput)
+    expect(errors.brand).toBeUndefined()
+  })
+
+  it('passes for brand at exactly 100 characters', () => {
+    const errors = validateFoodItemForm({ ...validInput, brand: 'a'.repeat(100) })
+    expect(errors.brand).toBeUndefined()
+  })
+
+  it('fails for brand over 100 characters', () => {
+    const errors = validateFoodItemForm({ ...validInput, brand: 'a'.repeat(101) })
+    expect(errors.brand).toBe('Brand must be 100 characters or less')
+  })
+})
+
 // ─── notes validation ───────────────────────────────
 
 describe('notes validation', () => {

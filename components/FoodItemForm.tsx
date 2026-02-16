@@ -22,6 +22,7 @@ export default function FoodItemForm({
 }: FoodItemFormProps) {
   const [formData, setFormData] = useState<FoodItemFormData>({
     name: '',
+    brand: '',
     quantity: '',
     category: '',
     expiry_date: getTodayString(),
@@ -48,6 +49,7 @@ export default function FoodItemForm({
 
       setFormData({
         name: initialData.name,
+        brand: initialData.brand || '',
         quantity: initialData.quantity || '',
         category: initialData.category || '',
         expiry_date: initialData.expiry_date,
@@ -58,6 +60,7 @@ export default function FoodItemForm({
       setQuantityUnit('')
       setFormData({
         name: '',
+        brand: '',
         quantity: '',
         category: '',
         expiry_date: getTodayString(),
@@ -72,6 +75,7 @@ export default function FoodItemForm({
     // Validate
     const validationErrors = validateFoodItemForm({
       name: formData.name,
+      brand: formData.brand || '',
       notes: formData.notes || '',
       quantityAmount,
       expiry_date: formData.expiry_date,
@@ -90,13 +94,14 @@ export default function FoodItemForm({
         ? `${quantityAmount} ${quantityUnit}`
         : quantityAmount || ''
 
-      await onSubmit({ ...formData, name: formData.name.trim(), quantity })
+      await onSubmit({ ...formData, name: formData.name.trim(), brand: formData.brand?.trim() || undefined, quantity })
 
       if (!initialData) {
         setQuantityAmount('')
         setQuantityUnit('')
         setFormData({
           name: '',
+          brand: '',
           quantity: '',
           category: '',
           expiry_date: getTodayString(),
@@ -166,6 +171,24 @@ export default function FoodItemForm({
               placeholder="e.g., Milk, Chicken, Lettuce"
             />
             {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+          </div>
+
+          {/* Brand */}
+          <div>
+            <label htmlFor="brand" className="block text-sm font-medium text-gray-700 mb-1">
+              Brand
+            </label>
+            <input
+              type="text"
+              id="brand"
+              name="brand"
+              maxLength={100}
+              value={formData.brand || ''}
+              onChange={handleChange}
+              className={`w-full px-3 py-2 border rounded-lg text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.brand ? 'border-red-300' : 'border-gray-300'}`}
+              placeholder="e.g., Horizon, Tyson, Dole"
+            />
+            {errors.brand && <p className="mt-1 text-xs text-red-500">{errors.brand}</p>}
           </div>
 
           {/* Category */}

@@ -81,7 +81,7 @@ serve(async (req) => {
     }
 
     if (body.mode === 'single') {
-      return await handleSingleMode(req, supabaseAdmin, authHeader, corsHeaders, startTime)
+      return await handleSingleMode(req, supabaseAdmin, authHeader, corsHeaders, startTime, body)
     }
 
     return await handleBatchMode(supabaseAdmin, authHeader, serviceRoleKey, corsHeaders, startTime)
@@ -103,7 +103,8 @@ async function handleSingleMode(
   supabaseAdmin: any,
   authHeader: string,
   corsHeaders: Record<string, string>,
-  startTime: number
+  startTime: number,
+  body: Record<string, any>
 ) {
   // Verify user JWT and return recipes in the response
   const token = authHeader.replace('Bearer ', '')
@@ -139,28 +140,38 @@ async function handleSingleMode(
     )
   }
 
-  // Query this user's expiring items (0-3 days)
+  // Query this user's expiring items within the requested range
+  const days = Math.min(7, Math.max(1, parseInt(body.expiryDays) || 3))
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
-  const threeDaysFromNow = new Date()
-  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3)
+  const rangeEnd = new Date()
+  rangeEnd.setDate(rangeEnd.getDate() + days)
 
-  const { data: userItems, error: userItemsError } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('food_items')
     .select('id, name, expiry_date, category, user_id')
     .eq('user_id', userId)
     .eq('status', 'active')
-    .gte('expiry_date', todayStr)
-    .lte('expiry_date', threeDaysFromNow.toISOString().split('T')[0])
-    .order('expiry_date', { ascending: true })
+
+  // If specific item IDs are provided, use those instead of date range
+  if (Array.isArray(body.itemIds) && body.itemIds.length > 0) {
+    query = query.in('id', body.itemIds)
+  } else {
+    query = query.gte('expiry_date', todayStr).lte('expiry_date', rangeEnd.toISOString().split('T')[0])
+  }
+
+  const { data: userItems, error: userItemsError } = await query.order('expiry_date', { ascending: true })
 
   if (userItemsError) {
     throw new Error(`Failed to fetch items: ${userItemsError.message}`)
   }
 
   if (!userItems || userItems.length === 0) {
+    const message = Array.isArray(body.itemIds) && body.itemIds.length > 0
+      ? 'No matching items found'
+      : `No items expiring in the next ${days} day${days > 1 ? 's' : ''}`
     return new Response(
-      JSON.stringify({ recipes: [], ingredients: [], cached: false, message: 'No items expiring in the next 3 days' }),
+      JSON.stringify({ recipes: [], ingredients: [], cached: false, message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

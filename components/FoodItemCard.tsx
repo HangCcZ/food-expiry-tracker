@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { FoodItem } from '@/types'
 import {
   getUrgencyLevel,
@@ -15,6 +15,9 @@ interface FoodItemCardProps {
   onMarkUsed: (id: string) => Promise<void>
   onMarkTossed: (id: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
+  isSelectMode?: boolean
+  isSelected?: boolean
+  onToggleSelect?: (id: string) => void
 }
 
 export default function FoodItemCard({
@@ -23,9 +26,36 @@ export default function FoodItemCard({
   onMarkUsed,
   onMarkTossed,
   onDelete,
+  isSelectMode,
+  isSelected,
+  onToggleSelect,
 }: FoodItemCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Auto-hide menu on click outside or scroll
+  useEffect(() => {
+    if (!isMenuOpen) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false)
+      }
+    }
+
+    const handleScroll = () => {
+      setIsMenuOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('scroll', handleScroll, { capture: true })
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('scroll', handleScroll, { capture: true })
+    }
+  }, [isMenuOpen])
 
   const urgency = getUrgencyLevel(item.expiry_date)
   const statusText = getExpiryStatusText(item.expiry_date)
@@ -64,12 +94,27 @@ export default function FoodItemCard({
 
   return (
     <div
-      className={`relative border-l-4 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow ${colorClasses}`}
+      className={`relative border-l-4 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow ${colorClasses} ${isSelectMode ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-orange-500' : ''}`}
+      onClick={isSelectMode ? () => onToggleSelect?.(item.id) : undefined}
     >
       {/* Header */}
       <div className="flex items-start justify-between">
+        {isSelectMode && (
+          <div className="shrink-0 mr-2 mt-1">
+            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected ? 'bg-orange-600 border-orange-600' : 'border-gray-300'}`}>
+              {isSelected && (
+                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+          </div>
+        )}
         <div className="flex-1">
           <h3 className="font-semibold text-lg">{item.name}</h3>
+          {item.brand && (
+            <p className="text-xs text-gray-500">{item.brand}</p>
+          )}
           {item.category && (
             <span className="inline-block text-xs px-2 py-1 rounded-full bg-white bg-opacity-50 mt-1">
               {item.category}
@@ -78,7 +123,7 @@ export default function FoodItemCard({
         </div>
 
         {/* Menu Button */}
-        <div className="relative">
+        <div className="relative" ref={menuRef}>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="p-1 hover:bg-white hover:bg-opacity-50 rounded"

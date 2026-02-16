@@ -1,17 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { RecipeSuggestion } from '@/types'
 
-export default function RecipeSuggestions() {
+const EXPIRY_DAY_OPTIONS = [1, 2, 3, 5, 7] as const
+
+interface RecipeSuggestionsProps {
+  selectedItemIds?: string[]
+  onDismiss?: () => void
+}
+
+export default function RecipeSuggestions({ selectedItemIds, onDismiss }: RecipeSuggestionsProps = {}) {
   const [recipes, setRecipes] = useState<RecipeSuggestion[] | null>(null)
   const [ingredients, setIngredients] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cached, setCached] = useState(false)
+  const [expiryDays, setExpiryDays] = useState(3)
 
-  const handleGetRecipes = async () => {
+  const handleGetRecipes = useCallback(async () => {
     setLoading(true)
     setError(null)
 
@@ -23,9 +31,14 @@ export default function RecipeSuggestions() {
         throw new Error('Please sign in to get recipe suggestions')
       }
 
+      const requestBody: Record<string, unknown> = { mode: 'single', expiryDays }
+      if (selectedItemIds && selectedItemIds.length > 0) {
+        requestBody.itemIds = selectedItemIds
+      }
+
       const { data, error: fnError } = await supabase.functions.invoke(
         'ai-recipe-suggestions',
-        { body: { mode: 'single' } }
+        { body: requestBody }
       )
 
       if (fnError) {
@@ -56,29 +69,56 @@ export default function RecipeSuggestions() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [expiryDays, selectedItemIds])
+
+  // Auto-trigger when selectedItemIds are provided (multi-select mode)
+  useEffect(() => {
+    if (selectedItemIds && selectedItemIds.length > 0) {
+      handleGetRecipes()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial state — compact trigger
   if (!recipes && !loading && !error) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-            <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
+      <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-900">AI Recipe Ideas</p>
+              <p className="text-xs text-gray-500 truncate">Suggestions based on your expiring ingredients</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900">AI Recipe Ideas</p>
-            <p className="text-xs text-gray-500 truncate">Suggestions based on your expiring ingredients</p>
+          <button
+            onClick={handleGetRecipes}
+            className="px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded-lg hover:bg-orange-700 shrink-0"
+          >
+            Get Ideas
+          </button>
+        </div>
+        <div className="flex items-center gap-2 mt-2 ml-11">
+          <span className="text-xs text-gray-500">Expiring in:</span>
+          <div className="flex gap-1">
+            {EXPIRY_DAY_OPTIONS.map((d) => (
+              <button
+                key={d}
+                onClick={() => setExpiryDays(d)}
+                className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+                  expiryDays === d
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-orange-50 text-orange-600 hover:bg-orange-100'
+                }`}
+              >
+                {d}d
+              </button>
+            ))}
           </div>
         </div>
-        <button
-          onClick={handleGetRecipes}
-          className="px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded-lg hover:bg-orange-700 shrink-0"
-        >
-          Get Ideas
-        </button>
       </div>
     )
   }
@@ -131,7 +171,9 @@ export default function RecipeSuggestions() {
       {/* Header */}
       <div className="px-4 py-3 bg-orange-50 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-orange-800">Recipe Ideas</span>
+          <span className="text-sm font-semibold text-orange-800">
+            {selectedItemIds ? `Recipe Ideas (${selectedItemIds.length} items)` : 'Recipe Ideas'}
+          </span>
           {cached && (
             <span className="text-[10px] font-medium text-orange-500 bg-orange-100 px-1.5 py-0.5 rounded">
               cached
@@ -148,6 +190,7 @@ export default function RecipeSuggestions() {
             setRecipes(null)
             setError(null)
             setCached(false)
+            onDismiss?.()
           }}
           className="text-xs text-orange-500 hover:text-orange-700"
         >

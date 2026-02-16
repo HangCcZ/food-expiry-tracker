@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { FoodItem, FoodItemFormData } from '@/types';
+import { FOOD_CATEGORIES } from '@/types';
 import { categorizeFoodItems } from '@/lib/utils/dateHelpers';
 import FoodItemCard from './FoodItemCard';
 import FoodItemForm from './FoodItemForm';
@@ -16,6 +17,10 @@ export default function Dashboard() {
     useFoodItems(user?.id);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FoodItem | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [showSelectedRecipes, setShowSelectedRecipes] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
     urgent: false,
     soon: false,
@@ -26,7 +31,28 @@ export default function Dashboard() {
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const categorized = categorizeFoodItems(items);
+  const toggleItemSelection = (id: string) => {
+    setSelectedItemIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedItemIds(new Set());
+    setIsSelectMode(false);
+    setShowSelectedRecipes(false);
+  };
+
+  const filteredItems = categoryFilter
+    ? items.filter(item => item.category === categoryFilter)
+    : items;
+  const categorized = categorizeFoodItems(filteredItems);
   const handleAddItem = async (data: FoodItemFormData) => {
     if (editingItem) {
       await updateItem(editingItem.id, data);
@@ -117,6 +143,24 @@ export default function Dashboard() {
               <span className="text-xs text-gray-400 hidden sm:block">
                 {user?.email}
               </span>
+              {items.length > 0 && (
+                <button
+                  onClick={() => {
+                    setIsSelectMode(!isSelectMode);
+                    if (isSelectMode) clearSelection();
+                  }}
+                  className={`px-3 py-1.5 text-sm rounded-lg flex items-center gap-1.5 ${
+                    isSelectMode
+                      ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                      : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <span>{isSelectMode ? 'Cancel' : 'Select'}</span>
+                </button>
+              )}
               <button
                 onClick={() => {
                   setEditingItem(null);
@@ -146,7 +190,40 @@ export default function Dashboard() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-4">
         {/* Notification & Recipe banners */}
         <PushNotificationSetup />
-        <RecipeSuggestions />
+        {showSelectedRecipes ? (
+          <RecipeSuggestions selectedItemIds={Array.from(selectedItemIds)} onDismiss={clearSelection} />
+        ) : (
+          <RecipeSuggestions />
+        )}
+
+        {/* Category filter */}
+        {items.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            <button
+              onClick={() => setCategoryFilter('')}
+              className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${
+                categoryFilter === ''
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All
+            </button>
+            {FOOD_CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat === categoryFilter ? '' : cat)}
+                className={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${
+                  categoryFilter === cat
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
 
         {items.length === 0 ? (
           /* Empty State */
@@ -233,6 +310,9 @@ export default function Dashboard() {
                           onMarkUsed={handleMarkUsed}
                           onMarkTossed={handleMarkTossed}
                           onDelete={deleteItem}
+                          isSelectMode={isSelectMode}
+                          isSelected={selectedItemIds.has(item.id)}
+                          onToggleSelect={toggleItemSelection}
                         />
                       ))}
                     </div>
@@ -243,6 +323,25 @@ export default function Dashboard() {
           </>
         )}
       </main>
+
+      {/* Multi-select floating action bar */}
+      {isSelectMode && selectedItemIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg border border-gray-200 px-4 py-2 flex items-center gap-3 z-30">
+          <span className="text-sm font-medium text-gray-700">{selectedItemIds.size} selected</span>
+          <button
+            onClick={() => setShowSelectedRecipes(true)}
+            className="px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded-lg hover:bg-orange-700"
+          >
+            Get Recipes
+          </button>
+          <button
+            onClick={clearSelection}
+            className="text-xs text-gray-500 hover:text-gray-700"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Form Modal */}
       <FoodItemForm
