@@ -2,14 +2,12 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<'success' | 'error'>('success')
-  const router = useRouter()
   const supabase = createClient()
 
   const handleMagicLink = async (e: React.FormEvent) => {
@@ -30,9 +28,9 @@ export default function LoginPage() {
 
       setMessageType('success')
       setMessage('Check your email for the magic link!')
-    } catch (error: any) {
+    } catch (error: unknown) {
       setMessageType('error')
-      setMessage(error.message || 'Error sending magic link')
+      setMessage(error instanceof Error ? error.message : 'Error sending magic link')
     } finally {
       setLoading(false)
     }

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import type { FoodItem, FoodItemFormData } from '@/types'
 import { FOOD_CATEGORIES, QUANTITY_UNITS } from '@/types'
 import { getTodayString } from '@/lib/utils/dateHelpers'
+import { validateFoodItemForm, hasErrors, type ValidationErrors } from '@/lib/utils/validation'
 import CustomSelect from './CustomSelect'
 
 interface FoodItemFormProps {
@@ -29,11 +30,12 @@ export default function FoodItemForm({
   const [quantityAmount, setQuantityAmount] = useState('')
   const [quantityUnit, setQuantityUnit] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState<ValidationErrors>({})
 
   // Populate form when editing
   useEffect(() => {
+    setErrors({})
     if (initialData) {
-      // Parse quantity into amount and unit
       const qty = initialData.quantity || ''
       const match = qty.match(/^(\d+\.?\d*)\s*(.*)$/)
       if (match) {
@@ -52,7 +54,6 @@ export default function FoodItemForm({
         notes: initialData.notes || '',
       })
     } else {
-      // Reset form for new item
       setQuantityAmount('')
       setQuantityUnit('')
       setFormData({
@@ -67,17 +68,30 @@ export default function FoodItemForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Validate
+    const validationErrors = validateFoodItemForm({
+      name: formData.name,
+      notes: formData.notes || '',
+      quantityAmount,
+      expiry_date: formData.expiry_date,
+    })
+
+    if (hasErrors(validationErrors)) {
+      setErrors(validationErrors)
+      return
+    }
+
     setIsSubmitting(true)
+    setErrors({})
 
     try {
-      // Combine quantity amount and unit
       const quantity = quantityAmount && quantityUnit
         ? `${quantityAmount} ${quantityUnit}`
         : quantityAmount || ''
 
-      await onSubmit({ ...formData, quantity })
+      await onSubmit({ ...formData, name: formData.name.trim(), quantity })
 
-      // Reset form after successful submission
       if (!initialData) {
         setQuantityAmount('')
         setQuantityUnit('')
@@ -102,6 +116,9 @@ export default function FoodItemForm({
   ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    if (errors[name as keyof ValidationErrors]) {
+      setErrors((prev) => { const next = { ...prev }; delete next[name as keyof ValidationErrors]; return next })
+    }
   }
 
   if (!isOpen) return null
@@ -142,11 +159,13 @@ export default function FoodItemForm({
               id="name"
               name="name"
               required
+              maxLength={100}
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className={`w-full px-3 py-2 border rounded-lg text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.name ? 'border-red-300' : 'border-gray-300'}`}
               placeholder="e.g., Milk, Chicken, Lettuce"
             />
+            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
           </div>
 
           {/* Category */}
@@ -172,9 +191,15 @@ export default function FoodItemForm({
                 type="number"
                 step="0.1"
                 min="0"
+                max="99999"
                 value={quantityAmount}
-                onChange={(e) => setQuantityAmount(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                onChange={(e) => {
+                  setQuantityAmount(e.target.value)
+                  if (errors.quantityAmount) {
+                    setErrors((prev) => { const next = { ...prev }; delete next.quantityAmount; return next })
+                  }
+                }}
+                className={`flex-1 px-3 py-2 border rounded-lg text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.quantityAmount ? 'border-red-300' : 'border-gray-300'}`}
                 placeholder="Amount"
               />
               <CustomSelect
@@ -185,6 +210,7 @@ export default function FoodItemForm({
                 className="w-32"
               />
             </div>
+            {errors.quantityAmount && <p className="mt-1 text-xs text-red-500">{errors.quantityAmount}</p>}
           </div>
 
           {/* Expiry Date */}
@@ -199,8 +225,9 @@ export default function FoodItemForm({
               required
               value={formData.expiry_date}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className={`w-full px-3 py-2 border rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.expiry_date ? 'border-red-300' : 'border-gray-300'}`}
             />
+            {errors.expiry_date && <p className="mt-1 text-xs text-red-500">{errors.expiry_date}</p>}
           </div>
 
           {/* Notes */}
@@ -212,11 +239,13 @@ export default function FoodItemForm({
               id="notes"
               name="notes"
               rows={3}
+              maxLength={500}
               value={formData.notes}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              className={`w-full px-3 py-2 border rounded-lg text-gray-900 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none ${errors.notes ? 'border-red-300' : 'border-gray-300'}`}
               placeholder="Any additional notes..."
             />
+            {errors.notes && <p className="mt-1 text-xs text-red-500">{errors.notes}</p>}
           </div>
 
           {/* Actions */}

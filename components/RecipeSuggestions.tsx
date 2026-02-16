@@ -29,7 +29,15 @@ export default function RecipeSuggestions() {
       )
 
       if (fnError) {
-        throw new Error(fnError.message || 'Failed to get recipe suggestions')
+        // Extract actual error body from non-2xx responses
+        let message = 'Failed to get recipe suggestions'
+        try {
+          if (fnError.context && typeof fnError.context.json === 'function') {
+            const body = await fnError.context.json()
+            message = body.error || message
+          }
+        } catch { /* use default message */ }
+        throw new Error(message)
       }
 
       if (data.error) {
@@ -43,8 +51,8 @@ export default function RecipeSuggestions() {
       if (data.recipes.length === 0) {
         setError(data.message || 'No expiring items to make recipes from')
       }
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong. Please try again.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }

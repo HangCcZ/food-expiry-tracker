@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { FoodItem, FoodItemFormData } from '@/types'
 
@@ -15,7 +15,7 @@ export function useFoodItems(userId: string | undefined) {
   const supabase = createClient()
 
   // Fetch food items
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     if (!userId) {
       setLoading(false)
       return
@@ -35,13 +35,13 @@ export function useFoodItems(userId: string | undefined) {
       if (fetchError) throw fetchError
 
       setItems(data || [])
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch items')
       console.error('Error fetching food items:', err)
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId, supabase])
 
   // Add new food item
   const addItem = async (itemData: FoodItemFormData) => {
@@ -144,7 +144,7 @@ export function useFoodItems(userId: string | undefined) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId, supabase])
+  }, [userId, supabase, fetchItems])
 
   return {
     items,
