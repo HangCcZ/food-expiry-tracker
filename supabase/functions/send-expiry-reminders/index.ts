@@ -26,12 +26,6 @@ interface FoodItem {
   user_id: string
 }
 
-interface PushSubscription {
-  endpoint: string
-  p256dh: string
-  auth: string
-}
-
 serve(async (req) => {
   try {
     // Verify this is called by Supabase cron or has valid auth

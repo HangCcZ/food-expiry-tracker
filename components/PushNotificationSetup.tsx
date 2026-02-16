@@ -77,9 +77,9 @@ export default function PushNotificationSetup() {
 
         await showTestNotification();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error enabling notifications:', error);
-      alert(error.message || 'Failed to enable notifications');
+      alert(error instanceof Error ? error.message : 'Failed to enable notifications');
     } finally {
       setIsLoading(false);
     }
@@ -104,9 +104,9 @@ export default function PushNotificationSetup() {
 
       setIsSubscribed(false);
       setShowBanner(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error disabling notifications:', error);
-      alert(error.message || 'Failed to disable notifications');
+      alert(error instanceof Error ? error.message : 'Failed to disable notifications');
     } finally {
       setIsLoading(false);
     }
@@ -115,8 +115,8 @@ export default function PushNotificationSetup() {
   const handleTestNotification = async () => {
     try {
       await showTestNotification();
-    } catch (error: any) {
-      alert(error.message || 'Failed to show test notification');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Failed to show test notification');
     }
   };
 
