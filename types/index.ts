@@ -12,6 +12,7 @@ export interface FoodItem {
   id: string
   user_id: string
   name: string
+  brand?: string | null
   quantity?: string | null
   category?: string | null
   expiry_date: string
@@ -49,6 +50,7 @@ export interface NotificationLog {
 // Form types
 export interface FoodItemFormData {
   name: string
+  brand?: string
   quantity?: string
   category?: string
   expiry_date: string

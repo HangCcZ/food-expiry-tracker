@@ -1,5 +1,6 @@
 export interface ValidationErrors {
   name?: string
+  brand?: string
   notes?: string
   quantityAmount?: string
   expiry_date?: string
@@ -7,6 +8,7 @@ export interface ValidationErrors {
 
 export function validateFoodItemForm(fields: {
   name: string
+  brand?: string
   notes: string
   quantityAmount: string
   expiry_date: string
@@ -18,6 +20,10 @@ export function validateFoodItemForm(fields: {
     errors.name = 'Item name is required'
   } else if (trimmedName.length > 100) {
     errors.name = 'Item name must be 100 characters or less'
+  }
+
+  if (fields.brand && fields.brand.length > 100) {
+    errors.brand = 'Brand must be 100 characters or less'
   }
 
   if (fields.notes && fields.notes.length > 500) {
