@@ -141,7 +141,7 @@ async function handleSingleMode(
   }
 
   // Query this user's expiring items within the requested range
-  const days = Math.min(7, Math.max(1, parseInt(body.expiryDays) || 3))
+  const days = Math.min(30, Math.max(1, parseInt(body.expiryDays) || 3))
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
   const rangeEnd = new Date()

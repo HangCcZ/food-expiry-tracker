@@ -103,7 +103,7 @@ export default function RecipeSuggestions({ selectedItemIds, onDismiss }: Recipe
         </div>
         <div className="flex items-center gap-2 mt-2 ml-11">
           <span className="text-xs text-gray-500">Expiring in:</span>
-          <div className="flex gap-1">
+          <div className="flex gap-1 items-center">
             {EXPIRY_DAY_OPTIONS.map((d) => (
               <button
                 key={d}
@@ -117,6 +117,22 @@ export default function RecipeSuggestions({ selectedItemIds, onDismiss }: Recipe
                 {d}d
               </button>
             ))}
+            <span className="text-xs text-gray-400 mx-1">or</span>
+            <input
+              type="number"
+              min={1}
+              max={30}
+              value={!EXPIRY_DAY_OPTIONS.includes(expiryDays as typeof EXPIRY_DAY_OPTIONS[number]) ? expiryDays : ''}
+              onChange={(e) => {
+                const val = parseInt(e.target.value)
+                if (!isNaN(val) && val >= 1 && val <= 30) {
+                  setExpiryDays(val)
+                }
+              }}
+              placeholder="#"
+              className="w-12 px-1.5 py-0.5 text-xs border border-gray-300 rounded-lg text-center text-gray-900 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
+            />
+            <span className="text-xs text-gray-500">days</span>
           </div>
         </div>
       </div>
