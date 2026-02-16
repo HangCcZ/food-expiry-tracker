@@ -7,8 +7,9 @@ export function getDaysUntilExpiry(expiryDate: string): number {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const expiry = new Date(expiryDate)
-  expiry.setHours(0, 0, 0, 0)
+  // Append T00:00:00 so the string is parsed as local time
+  // (YYYY-MM-DD alone is parsed as UTC, causing off-by-one in negative UTC offsets)
+  const expiry = new Date(expiryDate + 'T00:00:00')
 
   const diffTime = expiry.getTime() - today.getTime()
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -44,7 +45,7 @@ export function getUrgencyLevel(
  * Format date for display
  */
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString)
+  const date = new Date(dateString + 'T00:00:00')
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',

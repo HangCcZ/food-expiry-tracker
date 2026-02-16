@@ -29,7 +29,15 @@ export default function RecipeSuggestions() {
       )
 
       if (fnError) {
-        throw new Error(fnError.message || 'Failed to get recipe suggestions')
+        // Extract actual error body from non-2xx responses
+        let message = 'Failed to get recipe suggestions'
+        try {
+          if (fnError.context && typeof fnError.context.json === 'function') {
+            const body = await fnError.context.json()
+            message = body.error || message
+          }
+        } catch { /* use default message */ }
+        throw new Error(message)
       }
 
       if (data.error) {
